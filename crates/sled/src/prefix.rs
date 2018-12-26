@@ -1,6 +1,10 @@
 use std::cmp::Ordering;
 
-pub(crate) fn prefix_encode(prefix: &[u8], buf: &[u8]) -> Vec<u8> {
+pub(crate) fn prefix_encode(
+    prefix: &[u8],
+    buf: &[u8],
+    version: Option<usize>,
+) -> Vec<u8> {
     assert!(
         prefix <= buf,
         "prefix {:?} must be lexicographically <= to the encoded buf {:?}",
@@ -18,12 +22,18 @@ pub(crate) fn prefix_encode(prefix: &[u8], buf: &[u8]) -> Vec<u8> {
     }
 
     let encoded_len = 1 + buf.len() - prefix_len;
-    let mut ret = Vec::with_capacity(encoded_len);
+    let mut ret = Vec::with_capacity(encoded_len + 8);
     unsafe {
-        ret.set_len(encoded_len);
+        ret.set_len(encoded_len + 8);
     }
-    ret[1..].copy_from_slice(&buf[prefix_len..]);
+    ret[1..encoded_len - 1].copy_from_slice(&buf[prefix_len..]);
     ret[0] = prefix_len as u8;
+
+    let mut vsn_buf: [u8; 8] =
+        unsafe { std::mem::transmute(version as u64) };
+    vsn_buf.reverse();
+
+    ret[encoded_len..].copy_from_slice(&vsn_buf);
     ret
 }
 

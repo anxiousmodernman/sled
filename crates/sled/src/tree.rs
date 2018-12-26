@@ -657,6 +657,7 @@ impl Tree {
                  of length >= 2 (root + leaf)",
             );
             let node: &Node = leaf_frag.unwrap_base();
+            let version = self.generate_id()?;
             let encoded_key = prefix_encode(&node.lo, key.as_ref());
 
             let mut subscriber_reservation =

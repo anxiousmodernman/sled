@@ -35,7 +35,6 @@
 
 mod binary_search;
 mod data;
-mod db;
 mod frag;
 mod iter;
 mod materializer;
@@ -45,13 +44,18 @@ mod prefix;
 mod recovery;
 mod subscription;
 mod tree;
+mod tx;
 
 pub use self::{
-    db::{tx, Db, Tx},
     iter::{Iter, Keys, Values},
     pinned_value::PinnedValue,
     subscription::{Event, Subscriber},
     tree::Tree,
+    tx::{
+        db::{Db, Tx},
+        mvcc::Mvcc,
+        tx::Transactor,
+    },
 };
 
 use pagecache::{
