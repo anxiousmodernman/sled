@@ -43,6 +43,7 @@ mod prefix;
 mod recovery;
 mod subscription;
 mod tree;
+mod version;
 
 const META_PID: PageId = 0;
 const COUNTER_PID: PageId = 1;
@@ -79,6 +80,7 @@ use {
         },
         recovery::Recovery,
         subscription::Subscriptions,
+        version::{Version, VersionKind},
     },
     log::{debug, error, trace},
     pagecache::{

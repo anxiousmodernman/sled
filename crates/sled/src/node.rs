@@ -33,18 +33,29 @@ impl Node {
         use self::Frag::*;
 
         match *frag {
-            Set(ref k, ref v) => {
+            Update(ref k, Version { ref version, ref kind, ref value}) if kind.is_set() => {
                 // (when hi is empty, it means it's unbounded)
                 if self.hi.is_empty()
                     || prefix_cmp_encoded(k, &self.hi, &self.lo)
                         == std::cmp::Ordering::Less
                 {
-                    self.set_leaf(k.clone(), v.clone());
+                    self.set_leaf(k.clone(), value.clone());
                 } else {
                     panic!("tried to consolidate set at key <= hi")
                 }
             }
-            Merge(ref k, ref v) => {
+            Update(ref k, Version { ref version, ref kind, ..}) if kind.is_del() => {
+                // (when hi is empty, it means it's unbounded)
+                if self.hi.is_empty()
+                    || prefix_cmp_encoded(k, &self.hi, &self.lo)
+                        == std::cmp::Ordering::Less
+                {
+                    self.del_leaf(k);
+                } else {
+                    panic!("tried to consolidate del at key <= hi")
+                }
+            }
+            Update(ref k, Version { ref version, ref kind, ref value}) if kind.is_merge() => {
                 // (when hi is empty, it means it's unbounded)
                 if self.hi.is_empty()
                     || prefix_cmp_encoded(k, &self.hi, &self.lo)
@@ -57,7 +68,7 @@ impl Node {
                             std::mem::transmute(merge_fn_ptr);
                         self.merge_leaf(
                             k.clone(),
-                            v.clone(),
+                            value.clone(),
                             merge_fn,
                         );
                     }
@@ -71,22 +82,13 @@ impl Node {
             ParentSplit(ref parent_split) => {
                 self.parent_split(parent_split);
             }
-            Del(ref k) => {
-                // (when hi is empty, it means it's unbounded)
-                if self.hi.is_empty()
-                    || prefix_cmp_encoded(k, &self.hi, &self.lo)
-                        == std::cmp::Ordering::Less
-                {
-                    self.del_leaf(k);
-                } else {
-                    panic!("tried to consolidate del at key <= hi")
-                }
-            }
             Base(_) => {
                 panic!("encountered base page in middle of chain")
             }
             Counter(_) => unimplemented!(),
             Meta(_) => unimplemented!(),
+            Stage(..) => unimplemented!(),
+            Commit(..) => unimplemented!(),
         }
     }
 

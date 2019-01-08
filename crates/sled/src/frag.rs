@@ -10,9 +10,9 @@ use super::*;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) enum Frag {
-    Set(Key, Value),
-    Del(Key),
-    Merge(Key, Value),
+    Commit(u64),
+    Stage(Key, Version),
+    Update(Key, Version),
     Base(Node),
     ChildSplit(ChildSplit),
     ParentSplit(ParentSplit),

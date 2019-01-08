@@ -6,7 +6,7 @@ use super::*;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) enum Data {
     Index(Vec<(Key, PageId)>),
-    Leaf(Vec<(Key, Value)>),
+    Leaf(Vec<(Key, Version)>),
 }
 
 impl Data {
@@ -31,10 +31,9 @@ impl Data {
                 let mut sz = 0_u64;
                 for (k, value) in v.iter() {
                     sz = sz
-                        .saturating_add(k.len() as u64)
                         .saturating_add(size_of::<Key>() as u64)
-                        .saturating_add(value.len() as u64)
-                        .saturating_add(size_of::<Value>() as u64);
+                        .saturating_add(k.len() as u64)
+                        .saturating_add(value.size_in_bytes());
                 }
                 sz.saturating_add(
                     size_of::<Vec<(Key, Value)>>() as u64
