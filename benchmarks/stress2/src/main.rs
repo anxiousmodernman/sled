@@ -40,7 +40,7 @@ Options:
     --threads=<#>      Number of threads [default: 4].
     --burn-in          Don't halt until we receive a signal.
     --duration=<s>     Seconds to run for [default: 10].
-    --key-len=<l>      The length of keys [default: 1].
+    --key-len=<l>      The length of keys [default: 10].
     --val-len=<l>      The length of values [default: 100].
     --get-prop=<p>     The relative proportion of get requests [default: 75].
     --set-prop=<p>     The relative proportion of set requests [default: 5].
@@ -202,7 +202,7 @@ fn main() {
     let config = sled::ConfigBuilder::new()
         .io_bufs(16)
         .io_buf_size(8_000_000)
-        .async_io(true)
+        .async_io(false)
         .async_io_threads(32)
         .blink_node_split_size(4096)
         .page_consolidation_threshold(10)

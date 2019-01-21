@@ -140,7 +140,7 @@ impl Tree {
 
         guard.flush();
 
-        Ok(ret.map(|r| PinnedValue::new(r, pin_guard)))
+        Ok(ret.map(|r| PinnedValue::new(&*r.1, pin_guard)))
     }
 
     /// Retrieve the key and value before the provided key,
@@ -331,9 +331,9 @@ impl Tree {
                 .get_internal(key.as_ref(), &guard)
                 .map_err(|e| e.danger_cast())?;
 
-            if old != cur.map(|v| &*v) {
+            if cur.map(|v| Some(&*v.1) == old).unwrap_or(false) {
                 return Err(Error::CasFailed(
-                    cur.map(|c| PinnedValue::new(c, pin_guard)),
+                    cur.map(|c| PinnedValue::new(&*c.1, pin_guard)),
                 ));
             }
 
@@ -385,8 +385,8 @@ impl Tree {
         }
     }
 
-    /// Set a key to a new value, returning the old value if it
-    /// was set.
+    /// Set a key to a new value, atomically returning the
+    /// old value if it was set.
     pub fn set<K: AsRef<[u8]>>(
         &self,
         key: K,
@@ -405,7 +405,7 @@ impl Tree {
 
         loop {
             let pin_guard = pin();
-            let (mut path, existing_key) =
+            let (mut path, existing_value) =
                 self.get_internal(key.as_ref(), &guard)?;
             let (leaf_frag, leaf_ptr) = path.pop().expect(
                 "path_for_key should always return a path \
@@ -455,8 +455,10 @@ impl Tree {
 
                     guard.flush();
 
-                    return Ok(existing_key.map(move |r| {
-                        PinnedValue::new(r, pin_guard)
+                    // IVec::new(existing_value).deallocate(&pin_guard);
+
+                    return Ok(existing_value.map(move |r| {
+                        PinnedValue::new(&*r.1, pin_guard)
                     }));
                 }
                 Err(Error::CasFailed(_)) => {}
@@ -492,10 +494,9 @@ impl Tree {
         }
 
         let guard = pin();
-        let pin_guard = pin();
 
         loop {
-            let (mut path, existing_key) =
+            let (mut path, existing_value) =
                 self.get_internal(key.as_ref(), &guard)?;
 
             let mut subscriber_reservation =
@@ -528,8 +529,10 @@ impl Tree {
                     }
 
                     guard.flush();
-                    return Ok(existing_key.map(move |r| {
-                        PinnedValue::new(r, pin_guard)
+
+                    // IVec::new(existing_value).deallocate(&pin_guard);
+                    return Ok(existing_value.map(move |r| {
+                        PinnedValue::new(&*r.1, guard)
                     }));
                 }
                 Err(Error::CasFailed(_)) => {
@@ -1087,7 +1090,7 @@ impl Tree {
         &self,
         key: K,
         guard: &'g Guard,
-    ) -> Result<(Path<'g>, Option<&'g [u8]>), ()> {
+    ) -> Result<(Path<'g>, Option<(IVec, IVec)>), ()> {
         let path = self.path_for_key(key.as_ref(), guard)?;
 
         let ret = path.last().and_then(|(last_frag, _tree_ptr)| {
@@ -1101,7 +1104,7 @@ impl Tree {
                 })
                 .ok();
 
-            search.map(|idx| &*items[idx].1)
+            search.map(|idx| items[idx])
         });
 
         Ok((path, ret))
