@@ -18,6 +18,9 @@ pub(crate) enum Frag {
     ParentSplit(ParentSplit),
     Counter(usize),
     Meta(Meta),
+    CommitVersion(u64),
+    PendingVersion(u64, IVec),
+    Versions(Versions),
 }
 
 impl Frag {

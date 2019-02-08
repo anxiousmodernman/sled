@@ -63,6 +63,14 @@ impl Materializer for BLinkMaterializer {
             Frag::Meta(_meta) => unimplemented!(
                 "the Meta page should always be replaced, not linked"
             ),
+            Frag::Versions(ref versions) => {
+                let mut versions = versions.clone();
+                for version in frag_iter {
+                    versions.apply(version, &self.config);
+                }
+
+                Frag::Versions(versions)
+            }
             _ => panic!("non-Base in first element of frags slice"),
         }
     }

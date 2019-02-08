@@ -44,6 +44,7 @@ mod prefix;
 mod recovery;
 mod subscription;
 mod tree;
+mod versions;
 
 const META_PID: PageId = 0;
 const COUNTER_PID: PageId = 1;
@@ -87,6 +88,7 @@ use {
     },
     serde::{Deserialize, Serialize},
     sled_sync::{debug_delay, pin, Guard},
+    versions::Versions,
 };
 
 type Key = Vec<u8>;

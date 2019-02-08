@@ -87,6 +87,9 @@ impl Node {
             }
             Counter(_) => unimplemented!(),
             Meta(_) => unimplemented!(),
+            PendingVersion(..) => unimplemented!(),
+            CommitVersion(_) => unimplemented!(),
+            Versions(_) => unimplemented!(),
         }
     }
 
