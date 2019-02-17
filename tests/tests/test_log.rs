@@ -18,6 +18,7 @@ use {
         thread,
     },
 };
+use std::mem::size_of;
 
 type Lsn = i64;
 type LogId = u64;
@@ -159,6 +160,62 @@ fn concurrent_logging() {
         t5.join().unwrap();
         t6.join().unwrap();
     }
+}
+
+#[test]
+fn concurrent_logging_404() {
+    let config = ConfigBuilder::new()
+        .temporary(true)
+        .segment_mode(SegmentMode::Linear)
+        .io_buf_size(1000)
+        .flush_every_ms(Some(50))
+        .build();
+    let log_arc = Arc::new(Log::start_raw_log(config.clone()).unwrap());
+
+    static SHARED_COUNTER: AtomicUsize = AtomicUsize::new(0);
+    static SUCCESS_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    let num_threads = 6;
+    let mut handles = Vec::new();
+    for t in 0..num_threads {
+        let log = log_arc.clone();
+        let h = thread::Builder::new()
+            .name(format!("t_{}", t))
+            .spawn(move || {
+                let iterations = 50_000;
+                for i in 0..iterations {
+                    let current = SHARED_COUNTER.load(Ordering::SeqCst);
+                    let raw_value: [u8; size_of::<usize>()] = unsafe { std::mem::transmute(current+1)};
+                    let res = log.reserve(raw_value.to_vec()).unwrap();
+                    match SHARED_COUNTER.compare_and_swap(current, current+1, Ordering::SeqCst) {
+                        // If the current value was returned, then CAS succeeded on AtomicUsize
+                        current => {
+                            res.complete();
+                            SUCCESS_COUNTER.fetch_add(1, Ordering::SeqCst);
+                        },
+                        // Any other value is an error
+                        _ => { res.abort(); },
+                    }
+                }
+            }).unwrap();
+        handles.push(h);
+    }
+
+    for h in handles {
+        h.join().unwrap();
+    }
+
+    drop(log_arc);
+
+    let log = Log::start_raw_log(config).unwrap();
+    let mut iter = log.iter_from(SEG_HEADER_LEN as Lsn);
+
+    for i in 0..SUCCESS_COUNTER.load(Ordering::SeqCst) {
+        // Do we care what's in the log? or just that we can iterate?
+        let (_, _, _) = iter.next().expect("expected some");
+    }
+    // Assert that there is nothing left in the log.
+    assert_eq!(iter.next(), None);
 }
 
 fn write(log: &Log) {
