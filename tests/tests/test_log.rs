@@ -182,7 +182,7 @@ fn concurrent_logging_404() {
         let h = thread::Builder::new()
             .name(format!("t_{}", t))
             .spawn(move || {
-                let iterations = 50_000;
+                let iterations = 5000;
                 for i in 0..iterations {
                     let current = SHARED_COUNTER.load(Ordering::SeqCst);
                     let raw_value: [u8; size_of::<usize>()] = unsafe { std::mem::transmute(current+1)};
@@ -209,8 +209,9 @@ fn concurrent_logging_404() {
 
     let log = Log::start_raw_log(config).unwrap();
     let mut iter = log.iter_from(SEG_HEADER_LEN as Lsn);
-
-    for i in 0..SUCCESS_COUNTER.load(Ordering::SeqCst) {
+    let successfuls = SUCCESS_COUNTER.load(Ordering::SeqCst);
+    println!("SUCCESSFULS: {}", successfuls);
+    for i in 0..successfuls {
         // Do we care what's in the log? or just that we can iterate?
         let (_, _, _) = iter.next().expect("expected some");
     }
